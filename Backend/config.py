@@ -1,0 +1,27 @@
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+CALIBRATION_FILE = DATA_DIR / "calibration.json"
+
+# Toggle Demo Mode
+DEMO_MODE = True
+
+# Demo Mode Timers (Seconds)
+DEMO_WARNING1_SECONDS = 5.0
+DEMO_WARNING2_SECONDS = 10.0
+DEMO_BLUR_SECONDS = 15.0
+
+# Production Mode Timers (Seconds)
+PROD_WARNING1_SECONDS = 30.0
+PROD_WARNING2_SECONDS = 60.0
+PROD_BLUR_SECONDS = 90.0
+
+PITCH_TOLERANCE_DEVIATION = 12.0
+
+# Active thresholds exported for State Machine
+WARNING1_SECONDS = DEMO_WARNING1_SECONDS if DEMO_MODE else PROD_WARNING1_SECONDS
+WARNING2_SECONDS = DEMO_WARNING2_SECONDS if DEMO_MODE else PROD_WARNING2_SECONDS
+BLUR_SECONDS = DEMO_BLUR_SECONDS if DEMO_MODE else PROD_BLUR_SECONDS
