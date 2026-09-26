@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PosturaX - Live Telemetry & Posture Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: 'Inter', sans-serif; }
+        .glass-card { background: rgba(22, 27, 34, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(48, 54, 61, 0.6); }
+        .glow-good { box-shadow: 0 0 15px rgba(46, 160, 67, 0.3); }
+        .glow-bad { box-shadow: 0 0 15px rgba(248, 81, 73, 0.4); }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <!-- TOP NAV -->
+    <header class="flex justify-between items-center pb-6 mb-6 border-b border-gray-800">
+        <div class="flex items-center space-x-3">
+            <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg">
+                <i class="fa-solid fa-child-reaching text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">PosturaX <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono">LIVE v1.0</span></h1>
+                <p class="text-xs text-gray-400">Real-Time Posture Analytics & Hardware Control</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span id="conn-status" class="flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-2"></span> Hardware Connected
+            </span>
+            <button onclick="fetchLatestData()" class="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 transition">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- METRICS OVERVIEW CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Live Pitch -->
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Current Pitch</p>
+                <p id="live-pitch" class="text-3xl font-extrabold text-white mt-1">0.0°</p>
+            </div>
+            <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+                <i class="fa-solid fa-compass text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Posture Status -->
+        <div id="status-card" class="glass-card p-5 rounded-2xl flex items-center justify-between transition-all duration-300">
+            <div>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Posture Status</p>
+                <p id="live-status" class="text-lg font-bold text-emerald-400 mt-1">GOOD POSTURE</p>
+            </div>
+            <div id="status-icon" class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                <i class="fa-solid fa-user-check text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Active Slouch Duration -->
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Active Slouch Timer</p>
+                <p id="live-timer" class="text-3xl font-extrabold text-white mt-1">0.0s</p>
+            </div>
+            <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+                <i class="fa-solid fa-stopwatch text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Total Warnings Triggered -->
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Warnings Today</p>
+                <p id="warning-count" class="text-3xl font-extrabold text-indigo-400 mt-1">0</p>
+            </div>
+            <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- LEFT: Real-time Pitch Chart (2 Cols) -->
+        <div class="lg:col-span-2 glass-card p-6 rounded-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-indigo-400"></i> Real-Time Pitch Telemetry
+                </h2>
+                <span class="text-xs text-gray-400">Threshold: <b class="text-amber-400">20.0°</b></span>
+            </div>
+            <div class="h-64 w-full">
+                <canvas id="pitchChart"></canvas>
+            </div>
+        </div>
+
+        <!-- RIGHT: History Log & Events (1 Col) -->
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i> Event History Log
+                    </h2>
+                    <button onclick="clearHistory()" class="text-xs text-gray-500 hover:text-red-400">Clear</button>
+                </div>
+                
+                <div id="history-container" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    <div class="text-center text-xs text-gray-500 py-8">Waiting for posture telemetry events...</div>
+                </div>
+            </div>
+
+            <!-- Threshold indicator bar -->
+            <div class="mt-4 pt-4 border-t border-gray-800">
+                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Safety Zone (&lt;20°)</span>
+                    <span>Slouch Warning (&ge;20°)</span>
+                </div>
+                <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden flex">
+                    <div class="bg-emerald-500 h-full" style="width: 60%"></div>
+                    <div class="bg-amber-500 h-full" style="width: 40%"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 1. 30s SMALL TOAST NOTIFICATION (Bottom Right - Stays 6s then auto-hides) -->
+    <div id="toast-30s" class="fixed bottom-6 right-6 z-50 bg-amber-950/90 border-2 border-amber-500 text-amber-200 p-4 rounded-2xl shadow-2xl flex items-center space-x-4 max-w-sm hidden transition-all duration-300">
+        <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl text-xl flex-shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-amber-400">30s Posture Notice</p>
+            <p class="text-sm font-medium text-white">Sit properly and correct your posture!</p>
+        </div>
+    </div>
+
+    <!-- 2. 60s STICKY WARNING MODAL (Top Center - Has OK button) -->
+    <div id="warning-60s" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 hidden transition-all duration-300">
+        <div class="bg-orange-950/95 border-2 border-orange-500 p-5 rounded-2xl shadow-2xl text-white flex items-center justify-between space-x-4 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <div class="p-3 bg-orange-500/20 text-orange-400 rounded-xl text-2xl flex-shrink-0">
+                    <i class="fa-solid fa-radiation animate-spin-slow"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-orange-400 uppercase">60s Slouch Warning!</h3>
+                    <p class="text-xs text-gray-200">Continuous slouching detected for 1 min. Spine strain increases!</p>
+                </div>
+            </div>
+            <button onclick="hide60sWarning()" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs rounded-xl shadow-md transition flex-shrink-0">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. 90s CRITICAL OVERLAY MODAL (NO OK Button - Clears ONLY on continuous straight sitting) -->
+    <div id="slouch-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
+        <div class="glass-card max-w-md w-full border-2 border-red-500/80 rounded-2xl p-8 text-center space-y-4 shadow-2xl glow-bad">
+            <div class="w-20 h-20 mx-auto rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-4xl mb-2">
+                <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+            </div>
+            <h2 class="text-2xl font-black text-red-400 uppercase tracking-wide">90s CRITICAL HAZARD</h2>
+            <p class="text-4xl font-extrabold text-white font-mono my-2"><span class="text-red-400">90s</span> Slouching</p>
+            <p class="text-sm text-gray-300 leading-relaxed">
+                URGENT! Aap 90 seconds se continuously bad posture me hain.<br>
+                <span class="text-red-400 font-semibold">Is overlay ko hatane ke liye aapko 15 seconds tak lagatar seedhe baithna hoga.</span>
+            </p>
+            <div id="overlay-progress" class="pt-3 text-amber-400 font-mono font-bold text-sm animate-pulse">
+                <i class="fa-solid fa-spinner fa-spin mr-1"></i> Hold Straight: 0.0s / 15.0s
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCRIPT -->
+    <script>
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+
+        let warningCounter = 0;
+        let pitchHistory = [];
+        let labelHistory = [];
+
+        // Accurate State Variables
+        let lastCheckTime = Date.now();
+        let slouchTimerSeconds = 0;
+        let straightCounterSecs = 0;
+        let maxSlouchInSession = 0; // Tracks peak slouch time before correction
+
+        let notified30 = false;
+        let notified60 = false;
+        let notified90 = false;
+        let toast30sTimer = null;
+
+        // Chart.js Setup
+        const ctx = document.getElementById('pitchChart').getContext('2d');
+        const pitchChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labelHistory,
+                datasets: [
+                    {
+                        label: 'Angle Pitch (°)',
+                        data: pitchHistory,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Slouch Threshold (20°)',
+                        data: Array(20).fill(20),
+                        borderColor: '#f59e0b',
+                        borderDash: [5, 5],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#9ca3af' },
+                        suggestedMin: 0,
+                        suggestedMax: 40
+                    }
+                },
+                plugins: { legend: { labels: { color: '#d1d5db' } } }
+            }
+        });
+
+        // Fetch Live Telemetry Data
+        async function fetchLatestData() {
+            const now = Date.now();
+            const dt = (now - lastCheckTime) / 1000;
+            lastCheckTime = now;
+
+            try {
+                const res = await fetch('http://192.168.0.116:8000/api/live');
+
+                if (!res.ok) {
+                    setHardwareStatus(false);
+                    return;
+                }
+
+                setHardwareStatus(true);
+                const data = await res.json();
+
+                // Update Pitch Display
+                document.getElementById('live-pitch').innerText = `${data.pitch.toFixed(1)}°`;
+
+                const statusCard = document.getElementById('status-card');
+                const statusText = document.getElementById('live-status');
+                const statusIcon = document.getElementById('status-icon');
+
+                const isBadPosture = (data.status === "FORWARD_SLOUCHING" || data.status === "BACKWARD_LEANING");
+
+                if (isBadPosture) {
+                    // USER IS SLOUCHING
+                    straightCounterSecs = 0; // Reset straight posture hold counter
+                    slouchTimerSeconds += dt;
+                    
+                    if (slouchTimerSeconds > maxSlouchInSession) {
+                        maxSlouchInSession = slouchTimerSeconds;
+                    }
+
+                    statusText.innerText = "BAD POSTURE";
+                    statusText.className = "text-lg font-bold text-red-400 mt-1";
+                    statusCard.className = "glass-card p-5 rounded-2xl flex items-center justify-between glow-bad border-red-500/30";
+                    statusIcon.className = "p-3 bg-red-500/10 text-red-400 rounded-xl";
+                    statusIcon.innerHTML = `<i class="fa-solid fa-user-xmark text-2xl"></i>`;
+
+                    document.getElementById('live-timer').innerText = `${slouchTimerSeconds.toFixed(1)}s`;
+
+                    // --- ALERT THRESHOLDS (Notification triggers ONLY - timer DOES NOT reset on notification) ---
+
+                    // 1. 30 SECONDS ALERT (Toast stays for 6s)
+                    if (slouchTimerSeconds >= 30 && !notified30) {
+                        notified30 = true;
+                        trigger30sToast();
+                    }
+
+                    // 2. 60 SECONDS ALERT (Sticky Banner with OK)
+                    if (slouchTimerSeconds >= 60 && !notified60) {
+                        notified60 = true;
+                        hide30sToast();
+                        trigger60sWarning();
+                    }
+
+                    // 3. 90 SECONDS ALERT (Full Screen Overlay - No OK Button)
+                    if (slouchTimerSeconds >= 90 && !notified90) {
+                        notified90 = true;
+                        hide60sWarning(); // Hides 60s warning right before 90s overlay pops up
+                        trigger90sOverlay();
+                    }
+
+                } else {
+                    // USER IS SITTING STRAIGHT
+                    straightCounterSecs += dt;
+
+                    statusText.innerText = "GOOD POSTURE";
+                    statusText.className = "text-lg font-bold text-emerald-400 mt-1";
+                    statusCard.className = "glass-card p-5 rounded-2xl flex items-center justify-between glow-good";
+                    statusIcon.className = "p-3 bg-emerald-500/10 text-emerald-400 rounded-xl";
+                    statusIcon.innerHTML = `<i class="fa-solid fa-user-check text-2xl"></i>`;
+
+                    // RESET RULE:
+                    // 10s if slouch peak was <= 30s
+                    // 15s if slouch peak crossed 30s (> 30s)
+                    const requiredResetTime = (maxSlouchInSession > 30) ? 15 : 10;
+
+                    // Update live hold progress inside 90s overlay if visible
+                    const overlayProgress = document.getElementById('overlay-progress');
+                    if (overlayProgress && notified90) {
+                        overlayProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Hold Straight: ${straightCounterSecs.toFixed(1)}s / ${requiredResetTime.toFixed(1)}s`;
+                    }
+
+                    if (straightCounterSecs >= requiredResetTime) {
+                        // FULL RESET OCCURS ONLY WHEN REQUIRED STRAIGHT SITTING TIME IS MET
+                        slouchTimerSeconds = 0;
+                        maxSlouchInSession = 0;
+                        straightCounterSecs = 0;
+                        notified30 = false;
+                        notified60 = false;
+                        notified90 = false;
+                        
+                        clearAllAlerts(); // Force hide Overlay, Toast & Banner on complete reset
+                        document.getElementById('live-timer').innerText = "0.0s";
+                    } else if (slouchTimerSeconds > 0) {
+                        // Show remaining straight posture hold time required to reset
+                        const remainSecs = (requiredResetTime - straightCounterSecs).toFixed(1);
+                        document.getElementById('live-timer').innerText = `${slouchTimerSeconds.toFixed(1)}s (Hold ${remainSecs}s straight)`;
+                    }
+                }
+
+                // Update Telemetry Chart
+                const nowTimeStr = new Date().toLocaleTimeString();
+                labelHistory.push(nowTimeStr);
+                pitchHistory.push(data.pitch);
+
+                if (labelHistory.length > 25) {
+                    labelHistory.shift();
+                    pitchHistory.shift();
+                }
+
+                pitchChart.data.datasets[1].data = Array(pitchHistory.length).fill(20);
+                pitchChart.update();
+
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+                setHardwareStatus(false);
+            }
+        }
+
+        // --- 30s TOAST HANDLERS (Auto-hides in 6s) ---
+        function trigger30sToast() {
+            incrementWarnings();
+            const toast = document.getElementById('toast-30s');
+            toast.classList.remove('hidden');
+
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("30s Posture Notice", { body: "Sit properly and correct your posture!" });
+            }
+
+            addEventToHistory("⚠️ 30s Slouch Notice", "30s");
+
+            clearTimeout(toast30sTimer);
+            toast30sTimer = setTimeout(() => {
+                hide30sToast();
+            }, 6000);
+        }
+
+        function hide30sToast() {
+            document.getElementById('toast-30s').classList.add('hidden');
+        }
+
+        // --- 60s STICKY BANNER HANDLERS ---
+        function trigger60sWarning() {
+            incrementWarnings();
+            const banner = document.getElementById('warning-60s');
+            banner.classList.remove('hidden');
+
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🚨 60s Posture Alert", { body: "Continuous slouching detected for 1 minute!" });
+            }
+
+            addEventToHistory("🚨 60s Warning Alert", "60s");
+        }
+
+        function hide60sWarning() {
+            document.getElementById('warning-60s').classList.add('hidden');
+        }
+
+        // --- 90s CRITICAL OVERLAY HANDLERS ---
+        function trigger90sOverlay() {
+            incrementWarnings();
+            const overlay = document.getElementById('slouch-overlay');
+            overlay.classList.remove('hidden');
+
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🔥 90s Critical Hazard", { body: "URGENT! 90s continuous bad posture detected!" });
+            }
+
+            addEventToHistory("🔥 90s Critical Overlay Hazard", "90s");
+        }
+
+        function dismissOverlay90() {
+            const overlay = document.getElementById('slouch-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // Force hide all active alerts on complete reset
+        function clearAllAlerts() {
+            hide30sToast();
+            hide60sWarning();
+            dismissOverlay90();
+        }
+
+        function incrementWarnings() {
+            warningCounter++;
+            document.getElementById('warning-count').innerText = warningCounter;
+        }
+
+        function addEventToHistory(eventTitle, badgeTag) {
+            const container = document.getElementById('history-container');
+            if (!container) return;
+
+            if (container.innerText.includes("Waiting for posture telemetry")) {
+                container.innerHTML = "";
+            }
+
+            const now = new Date().toLocaleTimeString();
+            const pitch = document.getElementById('live-pitch').innerText;
+
+            const itemHTML = `
+                <div class="p-3 bg-gray-900/60 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
+                    <div class="flex items-center space-x-2.5">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm"></i>
+                        <div>
+                            <p class="font-semibold text-gray-200">${eventTitle}</p>
+                            <p class="text-gray-500">${now} · Pitch: ${pitch}</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded border text-[10px] font-mono bg-red-500/10 text-red-400 border-red-500/20">${badgeTag}</span>
+                </div>
+            `;
+            container.insertAdjacentHTML('afterbegin', itemHTML);
+        }
+
+        function clearHistory() {
+            document.getElementById('history-container').innerHTML = `<div class="text-center text-xs text-gray-500 py-8">History cleared.</div>`;
+        }
+
+        function setHardwareStatus(isConnected) {
+            const statusEl = document.getElementById('conn-status');
+            if (isConnected) {
+                statusEl.className = "flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-2"></span> Hardware Connected`;
+            } else {
+                statusEl.className = "flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20";
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400 mr-2"></span> Hardware Disconnected`;
+            }
+        }
+
+        // Auto Poll every 500ms
+        setInterval(fetchLatestData, 500);
+    </script>
+</body>
+</html>
