@@ -1,0 +1,165 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <math.h>
+
+#define SDA_PIN 7
+#define SCL_PIN 6
+
+// WiFi Credentials
+const char* ssid = "DIR-615-8393";
+const char* password = "90570056";
+
+// PosturaX API
+const char* API_URL = "http://192.168.0.116:8000/api/telemetry";
+const char* API_KEY = "posturax_secret_key_2026";
+
+float referencePitch = 0;
+float filteredPitch = 0;
+
+float getPitch()
+{
+  Wire.beginTransmission(0x68);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+
+  Wire.requestFrom(0x68, 6, true);
+
+  int16_t AcX = Wire.read() << 8 | Wire.read();
+  int16_t AcY = Wire.read() << 8 | Wire.read();
+  int16_t AcZ = Wire.read() << 8 | Wire.read();
+
+  float ax = AcX / 16384.0;
+  float ay = AcY / 16384.0;
+  float az = AcZ / 16384.0;
+
+  float pitch =
+    atan2(ax, sqrt(ay * ay + az * az)) * 180.0 / PI;
+
+  return pitch;
+}
+
+float getAveragePitch()
+{
+  float sum = 0;
+
+  for(int i = 0; i < 5; i++)
+  {
+    sum += getPitch();
+    delay(5);
+  }
+
+  return sum / 5.0;
+}
+
+void setup()
+{
+  Serial.begin(115200);
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  Wire.beginTransmission(0x68);
+  Wire.write(0x6B);
+  Wire.write(0);
+  Wire.endTransmission(true);
+
+  Serial.println("POSTURAX STARTING");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("WiFi Connected");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.println("Sit in correct posture");
+  Serial.println("Calibrating for 10 seconds...");
+
+  float sumPitch = 0;
+
+  for(int i = 0; i < 100; i++)
+  {
+    sumPitch += getAveragePitch();
+    delay(100);
+  }
+
+  referencePitch = sumPitch / 100.0;
+  filteredPitch = referencePitch;
+
+  Serial.print("Reference Pitch = ");
+  Serial.println(referencePitch);
+}
+
+void loop()
+{
+  float rawPitch = getAveragePitch();
+
+  // Faster response filter
+  filteredPitch =
+      (0.5 * filteredPitch) +
+      (0.5 * rawPitch);
+
+  float deviation =
+      filteredPitch - referencePitch;
+
+  String postureStatus;
+
+  if (deviation > 3)
+  {
+    postureStatus = "FORWARD_SLOUCHING";
+  }
+  else if (deviation < -3)
+  {
+    postureStatus = "BACKWARD_LEANING";
+  }
+  else
+  {
+    postureStatus = "GOOD_POSTURE";
+  }
+
+  Serial.print("Pitch: ");
+  Serial.print(filteredPitch);
+
+  Serial.print(" | Deviation: ");
+  Serial.print(deviation);
+
+  Serial.print(" | Status: ");
+  Serial.println(postureStatus);
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
+   
+    HTTPClient http;
+    http.begin(API_URL);
+
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("x-api-key", API_KEY);
+
+    String jsonData = "{";
+    jsonData += "\"pitch\":" + String(filteredPitch, 2) + ",";
+    jsonData += "\"deviation\":" + String(deviation, 2) + ",";
+    jsonData += "\"status\":\"" + postureStatus + "\"";
+    jsonData += "}";
+
+    int httpCode = http.POST(jsonData);
+
+   if(httpCode > 0)
+{
+    Serial.println("Data Sent");
+}
+else
+{
+    Serial.println("Send Failed");
+}
+
+    http.end();
+  }
+
+  delay(1000);
+}
