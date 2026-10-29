@@ -29,13 +29,23 @@ app.mount("/static", StaticFiles(directory="../Frontend"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    # Yeh aapki static folder ke andar rakhi index.html file ko browser par load kar dega
-    index_file = os.path.join(BASE_DIR, "static", "index.html")
-    if os.path.exists(index_file):
-        with open(index_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
-    return {"message": "PosturaX Backend is running successfully! Place your index.html inside the static folder."}
-
+    # Check karein ki static folder hai ya Frontend folder
+    # Agar aapne Frontend folder rakha hai, toh uska path yahan de sakte hain
+    import os
+    
+    # Check multiple possible locations for index.html
+    possible_paths = [
+        os.path.join(BASE_DIR, "static", "index.html"),
+        os.path.join(BASE_DIR, "..", "Frontend", "index.html"),
+        os.path.join(BASE_DIR, "Frontend", "index.html")
+    ]
+    
+    for index_file in possible_paths:
+        if os.path.exists(index_file):
+            with open(index_file, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read(), status_code=200)
+                
+    return HTMLResponse(content="<h3>PosturaX Backend is running successfully! (index.html not found in static/Frontend path)</h3>", status_code=200)
 EXPECTED_API_KEY = "posturax_secret_key_2026"
 
 latest_telemetry = {
