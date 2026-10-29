@@ -25,7 +25,7 @@ app.add_middleware(
 
 # Static files (HTML, CSS, JS) ke liye folder mount kiya
 # (Ensure karein ki aapke project mein 'static' folder ho)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="../Frontend"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
