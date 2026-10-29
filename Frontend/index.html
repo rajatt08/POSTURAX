@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PosturaX - Live Telemetry & Posture Dashboard</title>
+    <title>PosturaX | Posture & Personal Wellness</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
@@ -15,6 +15,35 @@
         .glass-card { background: rgba(22, 27, 34, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(48, 54, 61, 0.6); }
         .glow-good { box-shadow: 0 0 15px rgba(46, 160, 67, 0.3); }
         .glow-bad { box-shadow: 0 0 15px rgba(248, 81, 73, 0.4); }
+        .wellness-nav-item { display:flex; width:100%; align-items:center; gap:.75rem; padding:.75rem 1rem; border-radius:.75rem; color:#c9d1d9; text-align:left; transition:background .2s,color .2s; }
+        .wellness-nav-item:hover, .wellness-nav-item.active { background:rgba(99,102,241,.16); color:#c7d2fe; }
+        .wellness-nav-item.active { box-shadow:inset 3px 0 #818cf8; }
+        [data-wellness-panel].hidden-panel { display:none !important; }
+        /* Persistent left navigation on desktop; slide-in drawer on mobile */
+        #wellness-nav-menu {
+            position: fixed !important; left: 0 !important; top: 0 !important; bottom: 0 !important;
+            width: 16rem !important; max-width: 86vw; height: 100vh; overflow-y: auto;
+            z-index: 60 !important; border-radius: 0 !important; padding: 1.5rem .75rem !important;
+            background: rgba(10, 14, 22, .98) !important; border: 0 !important;
+            border-right: 1px solid rgba(75, 85, 99, .55) !important;
+            box-shadow: 12px 0 35px rgba(0,0,0,.22); transform: translateX(-105%);
+            transition: transform .22s ease;
+        }
+        #wellness-nav-menu.sidebar-open { transform: translateX(0); }
+        #wellness-nav-menu .wellness-sidebar-brand { display:flex; align-items:center; gap:.75rem; padding:.5rem .75rem 1.5rem; margin-bottom:1rem; border-bottom:1px solid #26303b; }
+        #wellness-nav-menu .wellness-nav-item { margin-bottom:.35rem; min-height:3.4rem; }
+        #wellness-nav-menu .wellness-nav-item small { line-height:1.25; display:block; margin-top:.2rem; }
+        @media (min-width: 1024px) {
+            body { padding-left: 18rem !important; }
+            #wellness-nav-menu { transform: translateX(0); }
+            #wellness-menu-toggle { display:none !important; }
+            #wellness-nav-menu .sidebar-mobile-close { display:none !important; }
+        }
+        @media (max-width: 1023px) {
+            body.sidebar-drawer-open::after { content:''; position:fixed; inset:0; z-index:55; background:rgba(0,0,0,.55); }
+        }
+        html { scroll-behavior: smooth; }
+        [data-wellness-panel] { scroll-margin-top: 1.25rem; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
@@ -27,10 +56,28 @@
             </div>
             <div>
                 <h1 class="text-2xl font-bold text-white tracking-wide">PosturaX <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono">LIVE v1.0</span></h1>
-                <p class="text-xs text-gray-400">Real-Time Posture Analytics & Hardware Control</p>
+                <p class="text-xs text-gray-400">Posture intelligence · Personal wellness · Daily recovery</p>
             </div>
         </div>
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                <button id="wellness-menu-toggle" type="button" aria-expanded="false" aria-controls="wellness-nav-menu" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200" title="Open dashboard categories">
+                    <i id="wellness-menu-icon" class="fa-solid fa-bars text-lg"></i><span class="hidden sm:inline text-sm">Menu</span>
+                </button>
+                <nav id="wellness-nav-menu" class="wellness-sidebar" aria-label="Dashboard categories">
+                    <div class="wellness-sidebar-brand">
+                        <div class="p-2.5 bg-indigo-600 rounded-xl text-white"><i class="fa-solid fa-child-reaching text-xl"></i></div>
+                        <div><p class="text-white font-bold tracking-wide">PosturaX</p><p class="text-xs text-gray-500">Wellness workspace</p></div>
+                        <button class="sidebar-mobile-close ml-auto text-gray-400 hover:text-white p-2" type="button" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p class="px-3 pt-2 pb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Workspace</p>
+                    <button class="wellness-nav-item active" data-wellness-target="overview" type="button"><i class="fa-solid fa-gauge-high w-4"></i><span><b class="block text-sm">Overview</b><small class="text-xs text-gray-500">Quick wellness summary</small></span></button>
+                    <button class="wellness-nav-item" data-wellness-target="checkin" type="button"><i class="fa-solid fa-clipboard-check w-4"></i><span><b class="block text-sm">Stress check-in</b><small class="text-xs text-gray-500">Mood and current context</small></span></button>
+                    <button class="wellness-nav-item" data-wellness-target="activities" type="button"><i class="fa-solid fa-spa w-4"></i><span><b class="block text-sm">Activities & history</b><small class="text-xs text-gray-500">Exercises and past sessions</small></span></button>
+                    <button class="wellness-nav-item" data-wellness-target="sleep" type="button"><i class="fa-solid fa-moon w-4"></i><span><b class="block text-sm">Sleep & recovery</b><small class="text-xs text-gray-500">Sleep log and weekly trends</small></span></button>
+                    <button class="wellness-nav-item" data-wellness-target="breaks" type="button"><i class="fa-solid fa-hourglass-half w-4"></i><span><b class="block text-sm">Break reminders</b><small class="text-xs text-gray-500">Gentle movement prompts</small></span></button>
+                </nav>
+            </div>
             <span id="conn-status" class="flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-2"></span> Hardware Connected
             </span>
@@ -133,6 +180,188 @@
 
     </div>
 
+
+    <!-- STRESS & WELLNESS DASHBOARD -->
+    <section id="wellness-dashboard" class="mt-8 space-y-6">
+      <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+        <div>
+          <h2 class="text-2xl font-bold text-white"><i class="fa-solid fa-heart-pulse text-rose-400 mr-2"></i>Stress & Wellness</h2>
+          <p class="text-sm text-gray-400 mt-1">A personal recovery space built around your check-ins, daily habits and gentle, optional activities.</p>
+        </div>
+        <span id="hr-connection" class="text-xs px-3 py-2 rounded-full bg-gray-800 text-gray-300">DEMO MODE · Synthetic HR</span>
+      </div>
+
+      <div data-wellness-panel="overview" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="glass-card p-5 rounded-2xl">
+          <p class="text-xs text-gray-400 uppercase">Heart Rate</p>
+          <p class="mt-1"><span id="hr-value" class="text-3xl font-extrabold text-rose-400">--</span> <span class="text-sm text-gray-400">BPM</span></p>
+          <p id="hr-note" class="text-xs text-gray-500 mt-1">Synthetic demo reading · baseline 75 BPM</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl">
+          <p class="text-xs text-gray-400 uppercase">Your Check-in</p>
+          <p id="checkin-state-display" class="text-xl font-bold text-indigo-300 mt-1">Not checked in</p>
+          <p id="checkin-time-display" class="text-xs text-gray-500 mt-1">Your report appears here</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl">
+          <p class="text-xs text-gray-400 uppercase">Posture Context</p>
+          <p id="wellness-posture" class="text-xl font-bold text-emerald-300 mt-1">Waiting</p>
+          <p id="wellness-posture-note" class="text-xs text-gray-500 mt-1">Based on posture telemetry</p>
+        </div>
+        <div class="glass-card p-5 rounded-2xl">
+          <p class="text-xs text-gray-400 uppercase">Exercises Today</p>
+          <p id="sessions-today" class="text-3xl font-extrabold text-amber-300 mt-1">0</p>
+          <p class="text-xs text-gray-500 mt-1">Saved on this browser</p>
+        </div>
+      </div>
+
+      <div data-wellness-panel="checkin" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-lg font-bold text-white mb-1"><i class="fa-solid fa-clipboard-check text-indigo-400 mr-2"></i>Stress Check-in</h3>
+          <p class="text-sm text-gray-400 mb-4">How are you feeling right now?</p>
+          <form id="wellness-form" class="space-y-4">
+            <div>
+              <label for="stress-state" class="block text-sm text-gray-300 mb-2">Current state</label>
+              <select id="stress-state" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3">
+                <option>Relaxed</option><option selected>Okay</option><option>Stressed</option><option>Very stressed</option>
+              </select>
+            </div>
+            <div>
+              <label for="stress-activity" class="block text-sm text-gray-300 mb-2">What were you doing?</label>
+              <select id="stress-activity" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3">
+                <option value="Resting">Resting / sitting</option><option value="Walking">Walking / moving</option><option value="Exercising">Exercising</option><option value="Working or studying">Working / studying</option>
+              </select>
+            </div>
+            <div>
+              <label for="support-choice" class="block text-sm text-gray-300 mb-2">What would help?</label>
+              <select id="support-choice" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3">
+                <option value="Auto">Suggest something for me</option><option value="Breathing">Guided breathing</option><option value="Posture">Posture / movement break</option><option value="Both">Breathing and movement</option><option value="None">Just checking in</option>
+              </select>
+            </div>
+            <button class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl px-4 py-3" type="submit"><i class="fa-solid fa-check mr-2"></i>Save Check-in</button>
+            <p id="checkin-message" class="text-xs text-gray-400">Saved locally in this browser; backend sync is not configured.</p>
+          </form>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl xl:col-span-2">
+          <h3 class="text-lg font-bold text-white mb-1"><i class="fa-solid fa-chart-line text-rose-400 mr-2"></i>Heart Rate Trend</h3>
+          <p class="text-xs text-gray-400 mb-4">Synthetic demo data is shown until a real heart-rate sensor is connected.</p>
+          <div class="h-64"><canvas id="heartRateChart"></canvas></div>
+          <p id="hr-signal-quality" class="text-xs text-amber-300 mt-2">SIMULATED DATA — not a real measurement</p>
+          <div id="hr-alert" class="mt-3 p-3 rounded-xl bg-gray-900/70 border border-gray-700 text-sm text-gray-300">Demo monitoring started. Baseline: 75 BPM.</div>
+        </div>
+      </div>
+
+      <div data-wellness-panel="activities" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-6 rounded-2xl lg:col-span-2">
+          <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-wand-magic-sparkles text-amber-300 mr-2"></i>Recommended for You</h3>
+          <div class="flex gap-4 items-start">
+            <div class="p-4 rounded-2xl bg-emerald-500/10 text-emerald-300 text-3xl"><i id="recommendation-icon" class="fa-solid fa-person-walking"></i></div>
+            <div class="flex-1">
+              <p id="recommendation-title" class="text-lg font-bold text-white">Start with a check-in</p>
+              <p id="recommendation-description" class="text-sm text-gray-300 mt-1">Save how you feel to get a relevant suggestion.</p>
+              <p id="recommendation-reason" class="text-xs text-gray-500 mt-2">Heart rate alone cannot determine stress.</p>
+              <button id="start-activity" type="button" class="mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm">Start activity</button>
+            </div>
+          </div>
+          <div id="breathing-box" class="hidden mt-5 p-5 rounded-2xl bg-gray-900 border border-emerald-500/30 text-center">
+            <p class="text-xs uppercase text-emerald-300 font-bold">Gentle breathing · 2 minutes</p>
+            <div id="breath-circle" class="w-24 h-24 mx-auto my-4 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-200 font-semibold transition-all duration-1000">Breathe in</div>
+            <p class="text-sm text-gray-300">Breathe in comfortably and exhale slowly. Do not force or hold your breath.</p>
+            <p id="breath-timer" class="text-xs text-gray-500 mt-2">2:00 remaining</p>
+            <button id="stop-breathing" type="button" class="mt-3 px-4 py-2 rounded-lg bg-gray-700 text-white text-sm">Stop</button>
+          </div>
+          <div class="mt-6 border-t border-gray-800 pt-5">
+            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+              <div><h4 class="font-bold text-white"><i class="fa-solid fa-layer-group text-emerald-300 mr-2"></i>Activity library</h4><p class="text-xs text-gray-400 mt-1">Choose what fits your moment. Suggestions rotate by category; you stay in control.</p></div>
+              <select id="activity-filter" class="rounded-xl bg-gray-900 border border-gray-700 text-white p-2 text-sm" aria-label="Filter activities">
+                <option value="all">All activities</option><option value="calm">Calm & reset</option><option value="movement">Movement</option><option value="focus">Focus & grounding</option><option value="sleep">Sleep wind-down</option>
+              </select>
+            </div>
+            <div id="activity-library" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            <p class="text-xs text-gray-500 mt-3">Activities are general wellbeing suggestions, not treatment. Skip anything uncomfortable.</p>
+          </div>
+          <div id="activity-guide" class="hidden mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <div class="flex justify-between gap-3 items-start"><div><p id="activity-guide-title" class="font-semibold text-emerald-200"></p><p id="activity-guide-body" class="text-sm text-gray-300 mt-2"></p><p id="activity-guide-duration" class="text-xs text-gray-500 mt-2"></p></div><button id="close-activity-guide" type="button" class="text-gray-400 hover:text-white" aria-label="Close activity guide"><i class="fa-solid fa-xmark"></i></button></div>
+          </div>
+          <div id="exercise-feedback" class="hidden mt-5 p-4 rounded-xl border border-gray-700 bg-gray-900/70">
+            <p class="font-semibold text-white mb-3">How do you feel after the activity?</p>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" data-feedback="Better" class="feedback-btn px-3 py-2 rounded-lg bg-gray-800 hover:bg-emerald-700 text-sm">Better</button>
+              <button type="button" data-feedback="Same" class="feedback-btn px-3 py-2 rounded-lg bg-gray-800 hover:bg-indigo-700 text-sm">About the same</button>
+              <button type="button" data-feedback="Worse" class="feedback-btn px-3 py-2 rounded-lg bg-gray-800 hover:bg-amber-700 text-sm">Worse</button>
+            </div>
+          </div>
+        </div>
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-calendar-check text-indigo-400 mr-2"></i>Wellness History</h3>
+          <div id="wellness-history" class="space-y-3 max-h-72 overflow-y-auto"><p class="text-sm text-gray-500">No check-ins yet.</p></div>
+          <button id="clear-wellness" type="button" class="mt-4 text-xs text-gray-500 hover:text-red-400">Clear wellness history</button>
+        </div>
+      </div>
+      <!-- CONTINUOUS-USE BREAK REMINDERS -->
+      <div data-wellness-panel="breaks" class="glass-card p-5 rounded-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-hourglass-half text-amber-300 mr-2"></i>Break Reminders</h3>
+            <p class="text-sm text-gray-400 mt-1">Reminders count while this dashboard tab is visible.</p>
+          </div>
+          <div class="text-sm text-gray-300">Active session: <span id="usage-time" class="font-bold text-amber-300">0m</span></div>
+        </div>
+        <p id="usage-reminder" class="text-sm text-gray-300 mt-3">Next: shoulder and posture reset after 1 hour.</p>
+      </div>
+
+      <!-- DAILY SLEEP LOG + WEEKLY SUMMARY -->
+      <div data-wellness-panel="sleep" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-lg font-bold text-white mb-1"><i class="fa-solid fa-moon text-indigo-300 mr-2"></i>Sleep & Recovery Journal</h3>
+          <p class="text-sm text-gray-400 mb-4">Log sleep timing, perceived quality and night waking. Entries stay in this browser.</p>
+          <form id="sleep-form" class="space-y-4">
+            <div>
+              <label for="sleep-date" class="block text-sm text-gray-300 mb-2">Date</label>
+              <input id="sleep-date" type="date" required class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label for="sleep-bedtime" class="block text-sm text-gray-300 mb-2">Bedtime</label><input id="sleep-bedtime" type="time" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3" /></div>
+              <div><label for="sleep-waketime" class="block text-sm text-gray-300 mb-2">Wake-up time</label><input id="sleep-waketime" type="time" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3" /></div>
+            </div>
+            <div>
+              <label for="sleep-hours" class="block text-sm text-gray-300 mb-2">Total sleep (hours) <span class="text-gray-500">· auto-calculated when times are entered</span></label>
+              <input id="sleep-hours" type="number" min="0" max="24" step="0.25" required placeholder="e.g. 7.5" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3" />
+              <p id="sleep-duration-hint" class="text-xs text-gray-500 mt-1">Enter bedtime and wake-up time, or enter duration directly.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label for="sleep-quality" class="block text-sm text-gray-300 mb-2">Sleep quality</label><select id="sleep-quality" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3"><option value="">Not rated</option><option value="1">1 · Very poor</option><option value="2">2 · Poor</option><option value="3">3 · Fair</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
+              <div><label for="sleep-awakenings" class="block text-sm text-gray-300 mb-2">Times awake</label><select id="sleep-awakenings" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3"><option value="">Not recorded</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select></div>
+            </div>
+            <div><label for="sleep-note" class="block text-sm text-gray-300 mb-2">Optional note</label><input id="sleep-note" type="text" maxlength="120" placeholder="e.g. late caffeine, noisy room, felt refreshed" class="w-full rounded-xl bg-gray-900 border border-gray-700 text-white p-3" /></div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl px-4 py-3"><i class="fa-solid fa-floppy-disk mr-2"></i>Save Sleep</button>
+            <p id="sleep-message" class="text-xs text-gray-400">Saved locally in this browser.</p>
+          </form>
+        </div>
+        <div class="glass-card p-6 rounded-2xl xl:col-span-2">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-chart-column text-indigo-300 mr-2"></i>Weekly Sleep & Recovery Trends</h3>
+              <p class="text-xs text-gray-400 mt-1">Seven-day view of logged sleep duration. Quality and wake-ups are shown in the nightly cards.</p>
+            </div>
+            <div class="text-sm text-gray-300">7-day average: <span id="sleep-average" class="font-bold text-indigo-300">--</span></div>
+          </div>
+          <div class="h-64"><canvas id="sleepChart"></canvas></div>
+          <div id="sleep-week-list" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+          <div class="mt-4 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+            <h4 class="font-semibold text-indigo-200"><i class="fa-solid fa-brain mr-2"></i>Sleep, Recovery & Mood Patterns</h4>
+            <p id="sleep-stress-insight" class="text-sm text-gray-300 mt-2">Add sleep records and daily stress check-ins to see a weekly comparison.</p>
+          </div>
+          <div class="flex justify-between items-center mt-4 gap-3">
+            <p class="text-xs text-gray-500">For most adults, 7–9 hours is a general reference—not a diagnosis. Quality and individual needs vary.</p>
+            <button id="clear-sleep" type="button" class="text-xs text-gray-500 hover:text-red-400 shrink-0">Clear sleep log</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-xs text-gray-500 leading-relaxed">Wellness support only: heart rate can change with movement, caffeine, illness and other factors. Heart rate alone cannot determine stress. This dashboard is not a medical diagnostic tool. Stop an exercise if you feel dizzy, breathless or uncomfortable.</p>
+    </section>
+
     <!-- 1. 30s SMALL TOAST NOTIFICATION (Bottom Right - Stays 6s then auto-hides) -->
     <div id="toast-30s" class="fixed bottom-6 right-6 z-50 bg-amber-950/90 border-2 border-amber-500 text-amber-200 p-4 rounded-2xl shadow-2xl flex items-center space-x-4 max-w-sm hidden transition-all duration-300">
         <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl text-xl flex-shrink-0">
@@ -172,6 +401,7 @@
             <p class="text-4xl font-extrabold text-white font-mono my-2"><span class="text-red-400">90s</span> Slouching</p>
             <p class="text-sm text-gray-300 leading-relaxed">
                 URGENT! Aap 90 seconds se continuously bad posture me hain.<br>
+                <span class="text-emerald-300 font-semibold">Ab apne shoulders relax karein aur 1–2 minutes tak dheere, comfortable deep breaths lein. Saans ko force ya hold na karein.</span><br>
                 <span class="text-red-400 font-semibold">Is overlay ko hatane ke liye aapko 15 seconds tak lagatar seedhe baithna hoga.</span>
             </p>
             <div id="overlay-progress" class="pt-3 text-amber-400 font-mono font-bold text-sm animate-pulse">
@@ -252,7 +482,7 @@
             lastCheckTime = now;
 
             try {
-                const res = await fetch('http://192.168.0.116:8000/api/live');
+                const res = await fetch('http://10.240.35.155/api/live');
 
                 if (!res.ok) {
                     setHardwareStatus(false);
@@ -270,6 +500,7 @@
                 const statusIcon = document.getElementById('status-icon');
 
                 const isBadPosture = (data.status === "FORWARD_SLOUCHING" || data.status === "BACKWARD_LEANING");
+                updateWellnessPosture(data.status);
 
                 if (isBadPosture) {
                     // USER IS SLOUCHING
@@ -412,6 +643,9 @@
             incrementWarnings();
             const overlay = document.getElementById('slouch-overlay');
             overlay.classList.remove('hidden');
+            if (typeof setWellnessRecommendation === "function") {
+                setWellnessRecommendation("Posture reset + gentle breathing", "Sit upright, relax your shoulders, and take slow, comfortable breaths for 1–2 minutes. Do not force or hold your breath.", "Triggered by the 90-second posture reminder. This is a wellbeing prompt, not a claim that posture caused stress.", "fa-wind", "breathing");
+            }
 
             if ("Notification" in window && Notification.permission === "granted") {
                 new Notification("🔥 90s Critical Hazard", { body: "URGENT! 90s continuous bad posture detected!" });
@@ -480,8 +714,545 @@
             }
         }
 
+
+        // ---------- DAILY SLEEP LOG ----------
+        const SLEEP_KEY = "posturax_sleep_log_v1";
+        const sleepDateInput = document.getElementById("sleep-date");
+        sleepDateInput.value = new Date().toLocaleDateString("en-CA");
+        let sleepChart = null;
+        const bedtimeInput = document.getElementById("sleep-bedtime");
+        const wakeTimeInput = document.getElementById("sleep-waketime");
+        const sleepHoursInput = document.getElementById("sleep-hours");
+        function updateCalculatedSleepDuration() {
+            if (!bedtimeInput.value || !wakeTimeInput.value) return;
+            const toMinutes = value => { const [h, m] = value.split(":").map(Number); return h * 60 + m; };
+            let minutes = toMinutes(wakeTimeInput.value) - toMinutes(bedtimeInput.value);
+            if (minutes <= 0) minutes += 24 * 60;
+            const hours = Math.round((minutes / 60) * 4) / 4;
+            sleepHoursInput.value = hours.toFixed(2).replace(/\.?0+$/, "");
+            document.getElementById("sleep-duration-hint").textContent = `Estimated sleep window: ${hours.toFixed(2).replace(/\.?0+$/, "")} hours. This does not subtract time spent awake.`;
+        }
+        bedtimeInput.addEventListener("change", updateCalculatedSleepDuration);
+        wakeTimeInput.addEventListener("change", updateCalculatedSleepDuration);
+        sleepHoursInput.addEventListener("input", () => { if (!bedtimeInput.value || !wakeTimeInput.value) document.getElementById("sleep-duration-hint").textContent = "Duration entered manually. Add both times to estimate the sleep window."; });
+
+        function readSleepLog() {
+            try {
+                const data = JSON.parse(localStorage.getItem(SLEEP_KEY) || "[]");
+                return Array.isArray(data) ? data : [];
+            } catch (_) { return []; }
+        }
+        function saveSleepLog(records) {
+            try { localStorage.setItem(SLEEP_KEY, JSON.stringify(records)); return true; }
+            catch (_) { return false; }
+        }
+        function localDateKey(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
+        function renderSleepSummary() {
+            const all = readSleepLog();
+            const days = [];
+            const today = new Date();
+            for (let offset = 6; offset >= 0; offset--) {
+                const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
+                const key = localDateKey(day);
+                const record = all.find(item => item.date === key);
+                days.push({ key, label: day.toLocaleDateString(undefined, { weekday: "short" }), hours: record ? Number(record.hours) : null, note: record?.note || "" });
+            }
+            const recorded = days.filter(day => day.hours !== null && Number.isFinite(day.hours));
+            const average = recorded.length ? recorded.reduce((sum, day) => sum + day.hours, 0) / recorded.length : null;
+            document.getElementById("sleep-average").textContent = average === null ? "--" : `${average.toFixed(1)} h`;
+            renderSleepStressInsight(days, average);
+            const canvas = document.getElementById("sleepChart");
+            if (sleepChart) sleepChart.destroy();
+            sleepChart = new Chart(canvas, {
+                type: "bar",
+                data: {
+                    labels: days.map(day => day.label),
+                    datasets: [{ label: "Sleep (hours)", data: days.map(day => day.hours), backgroundColor: "rgba(129, 140, 248, 0.75)", borderColor: "rgb(129, 140, 248)", borderWidth: 1, borderRadius: 6, spanGaps: false }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: "#d1d5db" } }, tooltip: { callbacks: { label: context => context.raw == null ? "No entry" : `${context.raw} hours` } } },
+                    scales: {
+                        x: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(156,163,175,0.08)" } },
+                        y: { beginAtZero: true, suggestedMax: 9, max: 12, ticks: { color: "#9ca3af", stepSize: 2 }, grid: { color: "rgba(156,163,175,0.12)" }, title: { display: true, text: "Hours", color: "#9ca3af" } }
+                    }
+                }
+            });
+            document.getElementById("sleep-week-list").innerHTML = days.map(day => {
+                const record = all.find(item => item.date === day.key);
+                const quality = record && record.quality ? `Quality ${record.quality}/5` : "Quality not rated";
+                const wake = record && record.awakenings !== "" && record.awakenings != null ? ` · Awake ${record.awakenings === "4" ? "4+" : record.awakenings}×` : "";
+                return `<div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800"><p class="text-xs text-gray-400">${day.label} · ${day.key.slice(5)}</p><p class="font-bold text-white mt-1">${day.hours === null ? "No entry" : `${day.hours} h`}</p><p class="text-xs text-indigo-300 mt-1">${quality}${wake}</p>${day.note ? `<p class="text-xs text-gray-500 mt-1 break-words">${safeText(day.note)}</p>` : ""}</div>`;
+            }).join("");
+        }
+        function renderSleepStressInsight(currentDays, currentAverage) {
+            const target = document.getElementById("sleep-stress-insight");
+            if (!target) return;
+            const sleepRecords = readSleepLog();
+            const today = new Date();
+            const startThisWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+            const startPreviousWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 13);
+            const toDate = value => new Date(value + "T12:00:00");
+            const thisWeek = sleepRecords.filter(r => toDate(r.date) >= startThisWeek && toDate(r.date) <= today);
+            const previousWeek = sleepRecords.filter(r => toDate(r.date) >= startPreviousWeek && toDate(r.date) < startThisWeek);
+            const avg = list => list.length ? list.reduce((sum, r) => sum + Number(r.hours), 0) / list.length : null;
+            const thisAvg = avg(thisWeek);
+            const prevAvg = avg(previousWeek);
+            let text = thisAvg === null ? "Add sleep records for the last 7 days to calculate your average." : `Your recorded sleep average is ${thisAvg.toFixed(1)} hours/night this week. `;
+            if (thisAvg !== null) text += thisAvg < 7 ? "Most adults are generally advised to aim for 7–9 hours; consider a gradual, consistent bedtime routine. " : "This is within the general 7–9 hour adult reference range. ";
+            if (prevAvg !== null && thisAvg !== null) {
+                const diff = thisAvg - prevAvg;
+                text += `Compared with the previous 7-day period (${prevAvg.toFixed(1)} h/night), sleep ${Math.abs(diff) < 0.25 ? "was about the same" : diff > 0 ? `increased by ${diff.toFixed(1)} h/night` : `decreased by ${Math.abs(diff).toFixed(1)} h/night`}. `;
+            }
+            // Use a literal storage key so this function is safe even during initial page setup.
+            let checkins = [];
+            try { checkins = JSON.parse(localStorage.getItem("posturax_checkins_v1") || "[]"); } catch (_) {}
+            const stressScore = state => ({ "Relaxed": 1, "Okay": 2, "Stressed": 3, "Very stressed": 4 }[state] || null);
+            const inRange = (stamp, start, end) => { const d = new Date(stamp); return d >= start && d <= end; };
+            const thisCheckins = checkins.filter(c => inRange(c.timestamp, startThisWeek, new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1))).map(c => stressScore(c.state)).filter(v => v !== null);
+            const prevCheckins = checkins.filter(c => inRange(c.timestamp, startPreviousWeek, startThisWeek)).map(c => stressScore(c.state)).filter(v => v !== null);
+            const mean = list => list.length ? list.reduce((a,b) => a+b,0) / list.length : null;
+            const thisStress = mean(thisCheckins), prevStress = mean(prevCheckins);
+            const ratedQuality = thisWeek.map(r => Number(r.quality)).filter(v => Number.isFinite(v) && v >= 1 && v <= 5);
+            if (ratedQuality.length) {
+                const qAvg = ratedQuality.reduce((a,b) => a+b, 0) / ratedQuality.length;
+                text += `Your average self-rated sleep quality is ${qAvg.toFixed(1)}/5 across ${ratedQuality.length} rated night${ratedQuality.length === 1 ? "" : "s"}. `;
+            }
+            if (thisStress !== null) text += `Your average self-reported stress score this week is ${thisStress.toFixed(1)}/4 (${thisCheckins.length} check-in${thisCheckins.length===1?"":"s"}). `;
+            else text += "Add daily stress check-ins to compare sleep with how you feel. ";
+            if (thisStress !== null && prevStress !== null) {
+                const delta = thisStress - prevStress;
+                text += Math.abs(delta) < 0.15 ? "Your average reported stress is similar to last week." : delta < 0 ? "Your average reported stress is lower than last week." : "Your average reported stress is higher than last week.";
+            } else {
+                text += "This is a weekly comparison, not proof that sleep caused a stress change.";
+            }
+            target.textContent = text;
+        }
+
+        document.getElementById("sleep-form").addEventListener("submit", event => {
+            event.preventDefault();
+            const date = sleepDateInput.value;
+            updateCalculatedSleepDuration();
+            const hours = Number(document.getElementById("sleep-hours").value);
+            const note = document.getElementById("sleep-note").value.trim();
+            const bedtime = bedtimeInput.value;
+            const wakeTime = wakeTimeInput.value;
+            const quality = document.getElementById("sleep-quality").value;
+            const awakenings = document.getElementById("sleep-awakenings").value;
+            if (!date || !Number.isFinite(hours) || hours < 0 || hours > 24) {
+                document.getElementById("sleep-message").textContent = "Enter a valid date and duration from 0 to 24 hours.";
+                return;
+            }
+            const records = readSleepLog().filter(item => item.date !== date);
+            records.push({ date, hours, bedtime, wakeTime, quality, awakenings, note, updatedAt: new Date().toISOString() });
+            records.sort((a, b) => b.date.localeCompare(a.date));
+            const saved = saveSleepLog(records.slice(0, 365));
+            document.getElementById("sleep-message").textContent = saved ? `Sleep saved for ${date}. You can edit it by saving that date again.` : "Could not save; check browser storage settings.";
+            renderSleepSummary();
+        });
+        document.getElementById("clear-sleep").addEventListener("click", () => {
+            if (confirm("Clear all sleep records saved in this browser?")) {
+                localStorage.removeItem(SLEEP_KEY);
+                document.getElementById("sleep-message").textContent = "Sleep log cleared.";
+                renderSleepSummary();
+            }
+        });
+        renderSleepSummary();
+
+        // ---------- WELLNESS DASHBOARD ----------
+        const CHECKINS_KEY = "posturax_checkins_v1";
+        const SESSIONS_KEY = "posturax_sessions_v1";
+        // DEMO MODE: synthetic heart-rate data until a real sensor is integrated.
+        // This is for UI/testing only, not real health data.
+        const DEMO_HR_BASELINE = 75;
+        let latestHeartRate = null;
+        let hrDeviationStartedAt = null;
+        let lastHRAlertLevel = 0;
+        let lastHRDemoLevel = -1;
+        let latestPostureStatus = null;
+        let wellnessActivity = "movement";
+        let breathingInterval = null;
+        let breathingDeadline = null;
+        const hrLabels = [];
+        const hrValues = [];
+
+        function readWellness(key) {
+            try { const value = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(value) ? value : []; }
+            catch (_) { return []; }
+        }
+        function saveWellness(key, data) {
+            try { localStorage.setItem(key, JSON.stringify(data)); return true; } catch (_) { return false; }
+        }
+        function safeText(value) {
+            return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        }
+
+        const hrChart = new Chart(document.getElementById("heartRateChart").getContext("2d"), {
+            type: "line",
+            data: { labels: hrLabels, datasets: [{ label: "Heart Rate (BPM)", data: hrValues, borderColor: "#fb7185", backgroundColor: "rgba(251,113,133,.1)", borderWidth: 2, fill: true, tension: .3, pointRadius: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, animation: false,
+                scales: { x: { ticks: { color: "#9ca3af", maxTicksLimit: 6 }, grid: { color: "rgba(255,255,255,.04)" } },
+                          y: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,.05)" }, suggestedMin: 45, suggestedMax: 130 } },
+                plugins: { legend: { labels: { color: "#d1d5db" } } } }
+        });
+
+        function updateWellnessPosture(status) {
+            latestPostureStatus = status;
+            const label = document.getElementById("wellness-posture");
+            const note = document.getElementById("wellness-posture-note");
+            if (!label || !note) return;
+            if (status === "FORWARD_SLOUCHING" || status === "BACKWARD_LEANING") {
+                label.textContent = "Needs a break"; label.className = "text-xl font-bold text-rose-300 mt-1";
+                note.textContent = "Posture deviation reported";
+            } else if (status) {
+                label.textContent = "Good posture"; label.className = "text-xl font-bold text-emerald-300 mt-1";
+                note.textContent = "Current posture telemetry looks okay";
+            }
+        }
+
+        function renderWellnessHistory() {
+            const checkins = readWellness(CHECKINS_KEY);
+            const sessions = readWellness(SESSIONS_KEY);
+            const container = document.getElementById("wellness-history");
+            if (!checkins.length) container.innerHTML = '<p class="text-sm text-gray-500">No check-ins yet.</p>';
+            else container.innerHTML = checkins.slice(0, 8).map(c =>
+                `<div class="p-3 bg-gray-900/60 rounded-xl border border-gray-800">
+                    <div class="flex justify-between gap-2"><span class="font-semibold text-indigo-300">${safeText(c.state)}</span><span class="text-[10px] text-gray-500">${safeText(new Date(c.timestamp).toLocaleString())}</span></div>
+                    <p class="text-xs text-gray-400 mt-1">Activity: ${safeText(c.activity)} · Support: ${safeText(c.preference)}</p>
+                    <p class="text-xs text-gray-500 mt-1">HR: ${c.heartRate == null ? "unavailable" : safeText(c.heartRate + " BPM")} · Posture: ${safeText(c.posture || "unknown")}</p>
+                </div>`).join("");
+            const today = new Date().toDateString();
+            document.getElementById("sessions-today").textContent = sessions.filter(s => new Date(s.timestamp).toDateString() === today).length;
+        }
+
+        function recommendWellness(state, preference, posture) {
+            const badPosture = posture === "FORWARD_SLOUCHING" || posture === "BACKWARD_LEANING";
+            if (preference === "None") {
+                setWellnessRecommendation("Check-in saved", "No activity selected. Browse the activity library whenever you want.", "Your check-in is not a diagnosis.", "fa-circle-check", "none"); return;
+            }
+            let pool;
+            if (preference === "Breathing") pool = wellnessActivities.filter(a => a.category === "calm" && a.type === "breathing");
+            else if (preference === "Posture") pool = wellnessActivities.filter(a => a.category === "movement");
+            else if (preference === "Both") pool = wellnessActivities.filter(a => ["calm", "movement"].includes(a.category));
+            else if (state === "Very stressed" || state === "Stressed") pool = wellnessActivities.filter(a => a.category === "calm" || a.category === "focus");
+            else if (badPosture) pool = wellnessActivities.filter(a => a.category === "movement");
+            else if (state === "Relaxed") pool = wellnessActivities.filter(a => a.category === "sleep" || a.category === "focus");
+            else pool = wellnessActivities.filter(a => ["calm", "movement", "focus"].includes(a.category));
+            // Prefer an option different from the last completed activity where possible.
+            const recent = readWellness(SESSIONS_KEY)[0]?.activityId;
+            const choices = pool.filter(a => a.id !== recent);
+            const pickFrom = choices.length ? choices : pool;
+            const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)] || wellnessActivities[0];
+            chooseWellnessActivity(picked.id);
+            document.getElementById("recommendation-reason").textContent = `Suggested from your self-report${badPosture ? " and posture context" : ""}; not inferred from heart rate alone. You can choose another option below.`;
+        }
+        function setWellnessRecommendation(title, description, reason, icon, activity) {
+            document.getElementById("recommendation-title").textContent = title;
+            document.getElementById("recommendation-description").textContent = description;
+            document.getElementById("recommendation-reason").textContent = reason;
+            document.getElementById("recommendation-icon").className = "fa-solid " + icon;
+            wellnessActivity = activity;
+            document.getElementById("start-activity").disabled = activity === "none";
+            document.getElementById("start-activity").classList.toggle("opacity-50", activity === "none");
+            document.getElementById("start-activity").innerHTML = activity === "breathing" || activity === "both" ? '<i class="fa-solid fa-play mr-2"></i>Start breathing' : '<i class="fa-solid fa-play mr-2"></i>Start movement break';
+        }
+
+        document.getElementById("wellness-form").addEventListener("submit", event => {
+            event.preventDefault();
+            const item = {
+                timestamp: new Date().toISOString(),
+                state: document.getElementById("stress-state").value,
+                activity: document.getElementById("stress-activity").value,
+                preference: document.getElementById("support-choice").value,
+                heartRate: latestHeartRate,
+                posture: latestPostureStatus
+            };
+            const data = readWellness(CHECKINS_KEY); data.unshift(item);
+            const saved = saveWellness(CHECKINS_KEY, data.slice(0, 100));
+            document.getElementById("checkin-state-display").textContent = item.state;
+            document.getElementById("checkin-time-display").textContent = "Saved " + new Date(item.timestamp).toLocaleTimeString();
+            document.getElementById("checkin-message").textContent = saved ? "Saved in this browser. Backend sync is not configured." : "Browser storage unavailable; check privacy settings.";
+            recommendWellness(item.state, item.preference, item.posture);
+            renderWellnessHistory();
+            renderSleepSummary();
+        });
+
+        function getSyntheticHeartRate() {
+            // Repeating demo cycle: baseline, +12, +17, +22 BPM, then recovery.
+            // A small wobble makes the graph look like a live stream.
+            const phase = Math.floor((Date.now() / 1000) % 80);
+            let offset = 0;
+            if (phase >= 10 && phase < 25) offset = 12;
+            else if (phase >= 25 && phase < 40) offset = 17;
+            else if (phase >= 40 && phase < 55) offset = 22;
+            else if (phase >= 55 && phase < 65) offset = 12;
+            else if (phase >= 65 && phase < 75) offset = -12;
+            const wobble = Math.round(Math.sin(Date.now() / 5000) * 2);
+            return Math.max(50, Math.min(130, DEMO_HR_BASELINE + offset + wobble));
+        }
+
+        function evaluateSyntheticHR(bpm) {
+            const deviation = bpm - DEMO_HR_BASELINE;
+            const magnitude = Math.abs(deviation);
+            const level = magnitude >= 20 ? 20 : magnitude >= 15 ? 15 : magnitude >= 10 ? 10 : 0;
+            const alert = document.getElementById("hr-alert");
+            if (!level) {
+                hrDeviationStartedAt = null;
+                lastHRAlertLevel = 0;
+                lastHRDemoLevel = 0;
+                alert.textContent = `Within demo range. Baseline ${DEMO_HR_BASELINE} BPM; deviation ${deviation >= 0 ? "+" : ""}${deviation} BPM.`;
+                alert.className = "mt-3 p-3 rounded-xl bg-gray-900/70 border border-gray-700 text-sm text-gray-300";
+                return;
+            }
+            // Start a fresh 10-second timer whenever the deviation tier changes.
+            if (hrDeviationStartedAt === null || level !== lastHRDemoLevel) {
+                hrDeviationStartedAt = Date.now();
+                lastHRDemoLevel = level;
+                lastHRAlertLevel = 0;
+            }
+            const heldSeconds = (Date.now() - hrDeviationStartedAt) / 1000;
+            alert.textContent = `Demo deviation ${deviation >= 0 ? "+" : ""}${deviation} BPM (${heldSeconds.toFixed(0)}/10 seconds).`;
+            if (heldSeconds >= 10 && level > lastHRAlertLevel) {
+                lastHRAlertLevel = level;
+                const suggestions = {
+                    10: ["Pause and breathe", "Try 1–2 minutes of comfortable, slow breathing, then recheck how you feel."],
+                    15: ["Take a guided breathing break", "Pause activity if appropriate, breathe gently for 2 minutes, and check your stress level."],
+                    20: ["Take a longer wellbeing break", "Stop and rest comfortably, then recheck. This synthetic alert is not a medical warning or stress diagnosis."]
+                };
+                const item = suggestions[level];
+                setWellnessRecommendation(item[0], item[1], `Synthetic HR deviation reached ±${level} BPM for at least 10 seconds. Demo only; HR changes do not prove stress.`, "fa-wind", "breathing");
+                alert.textContent = `DEMO ALERT: ±${level} BPM deviation sustained for 10 seconds. ${item[0]}.`;
+                alert.className = "mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-200";
+            }
+        }
+
+        async function fetchHeartRate() {
+            // Synthetic stream intentionally replaces the sensor API for the prototype demo.
+            latestHeartRate = getSyntheticHeartRate();
+            document.getElementById("hr-value").textContent = latestHeartRate;
+            document.getElementById("hr-note").textContent = "Synthetic demo reading · baseline 75 BPM";
+            document.getElementById("hr-signal-quality").textContent = "SIMULATED DATA — not a real measurement";
+            const badge = document.getElementById("hr-connection");
+            badge.textContent = "DEMO MODE · Synthetic HR";
+            badge.className = "text-xs px-3 py-2 rounded-full bg-amber-500/10 text-amber-200 border border-amber-500/20";
+            hrLabels.push(new Date().toLocaleTimeString());
+            hrValues.push(latestHeartRate);
+            if (hrLabels.length > 30) { hrLabels.shift(); hrValues.shift(); }
+            hrChart.update("none");
+            evaluateSyntheticHR(latestHeartRate);
+        }
+
+        // Curated activity library: recommendations are optional and varied, not a diagnosis.
+        const wellnessActivities = [
+            { id:"paced-breathing", title:"Comfortable paced breathing", category:"calm", duration:"2 minutes", icon:"fa-wind", type:"breathing", description:"Breathe gently and comfortably, letting the exhale be unhurried. No breath holds." },
+            { id:"grounding-54321", title:"5–4–3–2–1 grounding", category:"focus", duration:"2–3 minutes", icon:"fa-eye", type:"guide", description:"Notice 5 things you see, 4 you feel, 3 you hear, 2 you smell and 1 you taste. Skip any step that does not suit you." },
+            { id:"shoulder-reset", title:"Shoulder & neck reset", category:"movement", duration:"60–90 seconds", icon:"fa-person-circle-check", type:"guide", description:"Drop your shoulders, gently roll them, and turn your head only within a comfortable range. Stop if it hurts." },
+            { id:"short-walk", title:"Mindful mini-walk", category:"movement", duration:"3–5 minutes", icon:"fa-person-walking", type:"guide", description:"Walk at an easy pace if safe and accessible. Notice your steps and surroundings without trying to change your mood." },
+            { id:"body-scan", title:"Quick body scan", category:"calm", duration:"3 minutes", icon:"fa-spa", type:"guide", description:"Bring attention from your feet to your shoulders. Notice tension without judging it; relax only where it feels comfortable." },
+            { id:"focus-reset", title:"Single-task reset", category:"focus", duration:"2 minutes", icon:"fa-bullseye", type:"guide", description:"Write down the next smallest useful task, silence one distraction, and work on that one step for two minutes." },
+            { id:"water-pause", title:"Hydration & screen pause", category:"movement", duration:"1–2 minutes", icon:"fa-glass-water", type:"guide", description:"Look away from the screen, blink naturally, and get water if you need it. This is a reset, not a stress test." },
+            { id:"sleep-winddown", title:"Sleep wind-down", category:"sleep", duration:"5 minutes", icon:"fa-moon", type:"guide", description:"Dim screens, make the room comfortable, and choose a quiet activity. Keep a consistent routine where practical." },
+            { id:"gratitude-note", title:"Thought check & reframe", category:"focus", duration:"3 minutes", icon:"fa-pen-to-square", type:"guide", description:"Write the thought that is bothering you, what facts support it, and one balanced alternative. You do not need to force positivity." },
+            { id:"gentle-stretch", title:"Gentle full-body stretch", category:"movement", duration:"2–4 minutes", icon:"fa-child-reaching", type:"guide", description:"Move gently through comfortable ranges for arms, upper back and legs. Avoid bouncing and stop if you feel pain or dizziness." },
+            { id:"quiet-break", title:"Quiet sensory break", category:"calm", duration:"2 minutes", icon:"fa-headphones-simple", type:"guide", description:"Reduce noise and notifications for a moment. Sit comfortably and notice sounds or sensations without needing to solve anything." },
+            { id:"bedtime-reflection", title:"Tomorrow plan & brain dump", category:"sleep", duration:"3 minutes", icon:"fa-book-open", type:"guide", description:"Write down unfinished tasks and one first step for tomorrow, then set the note aside to reduce bedtime planning loops." }
+        ];
+        let selectedWellnessActivity = wellnessActivities[0];
+        function renderActivityLibrary() {
+            const filter = document.getElementById("activity-filter")?.value || "all";
+            const list = wellnessActivities.filter(a => filter === "all" || a.category === filter);
+            document.getElementById("activity-library").innerHTML = list.map(a => `<article class="rounded-xl border border-gray-800 bg-gray-900/60 p-4 flex flex-col gap-3"><div class="flex items-start gap-3"><div class="w-10 h-10 shrink-0 rounded-xl bg-emerald-500/10 text-emerald-300 flex items-center justify-center"><i class="fa-solid ${a.icon}"></i></div><div class="min-w-0"><h5 class="text-sm font-semibold text-white">${safeText(a.title)}</h5><p class="text-[11px] text-gray-500 mt-1">${safeText(a.duration)} · ${safeText(a.category[0].toUpperCase()+a.category.slice(1))}</p></div></div><p class="text-xs text-gray-400 leading-relaxed">${safeText(a.description)}</p><button type="button" data-activity-id="${a.id}" class="mt-auto rounded-lg border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/10">Choose activity</button></article>`).join("");
+            document.querySelectorAll("[data-activity-id]").forEach(button => button.addEventListener("click", () => chooseWellnessActivity(button.dataset.activityId)));
+        }
+        function chooseWellnessActivity(id) {
+            const activity = wellnessActivities.find(a => a.id === id);
+            if (!activity) return;
+            selectedWellnessActivity = activity;
+            wellnessActivity = activity.type === "breathing" ? "breathing" : activity.id;
+            document.getElementById("recommendation-title").textContent = activity.title;
+            document.getElementById("recommendation-description").textContent = activity.description;
+            document.getElementById("recommendation-reason").textContent = `You selected a ${activity.category} activity. Choose what feels suitable; this is not a stress diagnosis.`;
+            document.getElementById("recommendation-icon").className = "fa-solid " + activity.icon;
+            document.getElementById("start-activity").disabled = false;
+            document.getElementById("start-activity").classList.remove("opacity-50");
+            document.getElementById("start-activity").innerHTML = '<i class="fa-solid fa-play mr-2"></i>Start selected activity';
+            const guide = document.getElementById("activity-guide");
+            guide.classList.remove("hidden");
+            document.getElementById("activity-guide-title").textContent = activity.title;
+            document.getElementById("activity-guide-body").textContent = activity.description;
+            document.getElementById("activity-guide-duration").textContent = "Suggested duration: " + activity.duration;
+            document.getElementById("breathing-box").classList.add("hidden");
+        }
+        document.getElementById("activity-filter").addEventListener("change", renderActivityLibrary);
+        document.getElementById("close-activity-guide").addEventListener("click", () => document.getElementById("activity-guide").classList.add("hidden"));
+        renderActivityLibrary();
+
+        function startBreathing() {
+            stopBreathing(false);
+            document.getElementById("breathing-box").classList.remove("hidden");
+            document.getElementById("exercise-feedback").classList.add("hidden");
+            breathingDeadline = Date.now() + 120000;
+            function tick() {
+                const remaining = Math.max(0, Math.ceil((breathingDeadline - Date.now()) / 1000));
+                document.getElementById("breath-timer").textContent = Math.floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0") + " remaining";
+                const phase = Math.floor((120 - remaining) % 10);
+                const circle = document.getElementById("breath-circle");
+                circle.textContent = phase < 4 ? "Breathe in" : "Breathe out";
+                circle.style.transform = phase < 4 ? "scale(1.08)" : "scale(.9)";
+                if (remaining <= 0) { stopBreathing(true); }
+            }
+            tick(); breathingInterval = setInterval(tick, 500);
+        }
+        function stopBreathing(completed) {
+            if (breathingInterval) clearInterval(breathingInterval);
+            breathingInterval = null; breathingDeadline = null;
+            document.getElementById("breathing-box").classList.add("hidden");
+            if (completed) document.getElementById("exercise-feedback").classList.remove("hidden");
+        }
+        document.getElementById("start-activity").addEventListener("click", () => {
+            if (wellnessActivity === "none") return;
+            if (wellnessActivity === "breathing" || wellnessActivity === "both") { startBreathing(); return; }
+            const guide = document.getElementById("activity-guide");
+            if (selectedWellnessActivity) guide.classList.remove("hidden");
+            document.getElementById("exercise-feedback").classList.remove("hidden");
+            document.getElementById("recommendation-description").textContent = selectedWellnessActivity ? `${selectedWellnessActivity.description} When you finish, share how it felt.` : "Take a gentle, comfortable break, then share how it felt.";
+        });
+        document.getElementById("stop-breathing").addEventListener("click", () => stopBreathing(false));
+        document.querySelectorAll(".feedback-btn").forEach(button => button.addEventListener("click", () => {
+            const sessions = readWellness(SESSIONS_KEY);
+            sessions.unshift({ timestamp: new Date().toISOString(), type: selectedWellnessActivity?.title || wellnessActivity, activityId: selectedWellnessActivity?.id || wellnessActivity, result: button.dataset.feedback });
+            saveWellness(SESSIONS_KEY, sessions.slice(0, 100));
+            document.getElementById("exercise-feedback").classList.add("hidden");
+            document.getElementById("recommendation-description").textContent = "Feedback saved: " + button.dataset.feedback + ". Future personalization can use this result.";
+            renderWellnessHistory();
+        }));
+        document.getElementById("clear-wellness").addEventListener("click", () => {
+            if (confirm("Clear wellness check-ins and exercise history saved in this browser?")) {
+                localStorage.removeItem(CHECKINS_KEY); localStorage.removeItem(SESSIONS_KEY);
+                document.getElementById("checkin-state-display").textContent = "Not checked in";
+                document.getElementById("checkin-time-display").textContent = "Your report appears here";
+                renderWellnessHistory();
+            }
+        });
+
+        // ---------- CONTINUOUS-USE REMINDERS ----------
+        let visibleUsageSeconds = 0;
+        const usageStages = [
+            { at: 3600, title: "1-hour posture reset", message: "You've been using PosturaX for about 1 hour. Roll your shoulders, relax your neck, and reset your posture for 30–60 seconds." },
+            { at: 5400, title: "1.5-hour movement break", message: "You've been using PosturaX for about 1.5 hours. Take a 3–5 minute walk or gentle movement break if possible." },
+            { at: 7200, title: "2-hour recovery break", message: "You've been using PosturaX for about 2 hours. Take a longer break, hydrate, move gently, and check in with how you feel." }
+        ];
+        const firedUsageStages = new Set();
+        function formatUsage(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return h ? `${h}h ${m}m` : `${m}m`;
+        }
+        function tickUsageReminders() {
+            if (document.visibilityState === "visible") visibleUsageSeconds++;
+            const timeEl = document.getElementById("usage-time");
+            const reminderEl = document.getElementById("usage-reminder");
+            if (timeEl) timeEl.textContent = formatUsage(visibleUsageSeconds);
+            const next = usageStages.find(stage => !firedUsageStages.has(stage.at));
+            if (reminderEl && next) reminderEl.textContent = `Next reminder at ${next.at / 60} minutes of visible use.`;
+            for (const stage of usageStages) {
+                if (visibleUsageSeconds >= stage.at && !firedUsageStages.has(stage.at)) {
+                    firedUsageStages.add(stage.at);
+                    setWellnessRecommendation(stage.title, stage.message, "Scheduled usage reminder; take breaks based on comfort and needs.", "fa-person-walking", "movement");
+                    if (reminderEl) reminderEl.textContent = stage.message;
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        new Notification("PosturaX · " + stage.title, { body: stage.message });
+                    }
+                }
+            }
+        }
+        setInterval(tickUsageReminders, 1000);
+
+        (function initWellness() {
+            const latest = readWellness(CHECKINS_KEY)[0];
+            if (latest) {
+                document.getElementById("checkin-state-display").textContent = latest.state;
+                document.getElementById("checkin-time-display").textContent = "Saved " + new Date(latest.timestamp).toLocaleString();
+                document.getElementById("stress-state").value = latest.state;
+                document.getElementById("stress-activity").value = latest.activity;
+                document.getElementById("support-choice").value = latest.preference;
+                recommendWellness(latest.state, latest.preference, latest.posture);
+            }
+            renderWellnessHistory();
+            fetchHeartRate();
+            setInterval(fetchHeartRate, 3000);
+        })();
+
+
         // Auto Poll every 500ms
         setInterval(fetchLatestData, 500);
-    </script>
+    
+
+    // Compact category navigation: show one wellness area at a time.
+    (function setupWellnessNavigation() {
+      const toggle = document.getElementById('wellness-menu-toggle');
+      const menu = document.getElementById('wellness-nav-menu');
+      const menuIcon = document.getElementById('wellness-menu-icon');
+      const buttons = Array.from(document.querySelectorAll('[data-wellness-target]'));
+      const panels = Array.from(document.querySelectorAll('[data-wellness-panel]'));
+      if (!toggle || !menu || !buttons.length || !panels.length) return;
+
+      const closeButton = menu.querySelector('.sidebar-mobile-close');
+      const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+      function closeMobileMenu() {
+        if (isDesktop()) return;
+        menu.classList.remove('sidebar-open');
+        document.body.classList.remove('sidebar-drawer-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        menuIcon.className = 'fa-solid fa-bars text-lg';
+      }
+
+      function setView(view) {
+        panels.forEach(panel => panel.classList.toggle('hidden-panel', panel.dataset.wellnessPanel !== view));
+        buttons.forEach(button => {
+          const active = button.dataset.wellnessTarget === view;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-current', active ? 'page' : 'false');
+        });
+        closeMobileMenu();
+        const targetPanel = panels.find(panel => panel.dataset.wellnessPanel === view);
+        if (targetPanel) {
+          requestAnimationFrame(() => targetPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        }
+      }
+
+      toggle.addEventListener('click', () => {
+        const willOpen = !menu.classList.contains('sidebar-open');
+        menu.classList.toggle('sidebar-open', willOpen);
+        document.body.classList.toggle('sidebar-drawer-open', willOpen);
+        toggle.setAttribute('aria-expanded', String(willOpen));
+        menuIcon.className = willOpen ? 'fa-solid fa-xmark text-lg' : 'fa-solid fa-bars text-lg';
+      });
+      if (closeButton) closeButton.addEventListener('click', closeMobileMenu);
+      buttons.forEach(button => button.addEventListener('click', () => setView(button.dataset.wellnessTarget)));
+      document.addEventListener('click', event => {
+        if (!isDesktop() && menu.classList.contains('sidebar-open') &&
+            !menu.contains(event.target) && !toggle.contains(event.target)) closeMobileMenu();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMobileMenu();
+      });
+      window.addEventListener('resize', () => {
+        if (isDesktop()) {
+          menu.classList.add('sidebar-open');
+          document.body.classList.remove('sidebar-drawer-open');
+        } else {
+          menu.classList.remove('sidebar-open');
+        }
+      });
+      setView('overview');
+    })();
+</script>
 </body>
 </html>
