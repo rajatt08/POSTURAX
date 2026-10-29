@@ -482,7 +482,7 @@
             lastCheckTime = now;
 
             try {
-                const res = await fetch('http://10.240.35.155/api/live');
+                const res = await fetch('http://posturax.onrender.com/api/live');
 
                 if (!res.ok) {
                     setHardwareStatus(false);
